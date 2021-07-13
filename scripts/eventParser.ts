@@ -71,4 +71,7 @@ async function fetchEvents() {
   }
 }
 
+fetchEvents();
+
 export default fetchEvents;
+
