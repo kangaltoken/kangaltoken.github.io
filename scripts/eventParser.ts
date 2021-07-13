@@ -2,6 +2,8 @@ require("dotenv").config();
 const fetch = require("node-fetch");
 const util = require("util");
 const fs = require("fs");
+import simpleGit, { SimpleGit } from "simple-git";
+const git: SimpleGit = simpleGit();
 
 function makeQuery(fromBlock: number): string {
   const query = `
@@ -37,13 +39,21 @@ function makeQuery(fromBlock: number): string {
   return query;
 }
 
-async function fetchEvents() {
-  const eventsHistory = fs.readFileSync("../apis/events.json");
+async function fetchEvents(lastEventBlockNumber?: number) {
+  let eventHistory: any;
+
+  try {
+    eventHistory = JSON.parse(fs.readFileSync("../apis/staking_events.json"));
+  } catch (error) {
+    console.log(error);
+  }
 
   let query: string;
 
-  if (eventsHistory) {
-    query = makeQuery(1);
+  if (eventHistory) {
+    console.log(eventHistory[eventHistory.length - 1].block.height);
+    const lastItemBlock = eventHistory[eventHistory.length - 1].block.height;
+    query = makeQuery(lastItemBlock);
   } else {
     query = makeQuery(0);
   }
@@ -64,14 +74,56 @@ async function fetchEvents() {
     const json = await fetch(url, opts).then((res: { json: () => any }) =>
       res.json()
     );
+    console.log(
+      util.inspect(
+        json.data.ethereum.smartContractEvents,
+        false,
+        null,
+        true /* enable colors */
+      )
+    );
 
-    console.log(util.inspect(json, false, null, true /* enable colors */));
+    const newEvents = json.data.ethereum.smartContractEvents;
+
+    if (newEvents.length > 0) {
+      if (lastEventBlockNumber) {
+        let containsLastEventBlockNumber = false;
+        newEvents.forEach((element: any) => {
+          if (element.block.height === lastEventBlockNumber) {
+            containsLastEventBlockNumber = true;
+          }
+        });
+        if (containsLastEventBlockNumber === false) {
+          fetchEventsAfterDelay(lastEventBlockNumber);
+        }
+      }
+      if (eventHistory) {
+        const updatedEventHistory = [
+          ...eventHistory,
+          ...json.data.ethereum.smartContractEvents,
+        ];
+        const data = JSON.stringify(updatedEventHistory);
+        fs.writeFileSync("../apis/staking_events.json", data);
+      } else {
+        const data = JSON.stringify(json.data.ethereum.smartContractEvents);
+        fs.writeFileSync("../apis/staking_events.json", data);
+      }
+
+      git.add("../*").commit("Updated events").push();
+    } else {
+      if (lastEventBlockNumber) {
+        fetchEventsAfterDelay(lastEventBlockNumber);
+      }
+    }
   } catch (error) {
     console.log(error);
   }
 }
 
-fetchEvents();
+export function fetchEventsAfterDelay(lastEventBlockNumber: number) {
+  setTimeout(function () {
+    fetchEvents(lastEventBlockNumber);
+  }, 60000 * 3);
+}
 
 export default fetchEvents;
-
