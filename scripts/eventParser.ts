@@ -39,7 +39,7 @@ function makeQuery(fromBlock: number): string {
   return query;
 }
 
-async function fetchEvents(lastEventBlockNumber?: number) {
+async function fetchEvents(receivedEventBlockNumber?: number) {
   let eventHistory: any;
 
   try {
@@ -86,17 +86,6 @@ async function fetchEvents(lastEventBlockNumber?: number) {
     const newEvents = json.data.ethereum.smartContractEvents;
 
     if (newEvents.length > 0) {
-      if (lastEventBlockNumber) {
-        let containsLastEventBlockNumber = false;
-        newEvents.forEach((element: any) => {
-          if (element.block.height === lastEventBlockNumber) {
-            containsLastEventBlockNumber = true;
-          }
-        });
-        if (containsLastEventBlockNumber === false) {
-          fetchEventsAfterDelay(lastEventBlockNumber);
-        }
-      }
       if (eventHistory) {
         const updatedEventHistory = [
           ...eventHistory,
@@ -104,6 +93,18 @@ async function fetchEvents(lastEventBlockNumber?: number) {
         ];
         const data = JSON.stringify(updatedEventHistory);
         fs.writeFileSync("../apis/staking_events.json", data);
+
+        if (receivedEventBlockNumber) {
+          let containsLastEventBlockNumber = false;
+          updatedEventHistory.forEach((element: any) => {
+            if (element.block.height === receivedEventBlockNumber) {
+              containsLastEventBlockNumber = true;
+            }
+          });
+          if (containsLastEventBlockNumber === false) {
+            fetchEventsAfterDelay(receivedEventBlockNumber);
+          }
+        }
       } else {
         const data = JSON.stringify(json.data.ethereum.smartContractEvents);
         fs.writeFileSync("../apis/staking_events.json", data);
@@ -111,8 +112,8 @@ async function fetchEvents(lastEventBlockNumber?: number) {
 
       git.add("../*").commit("Updated events").push();
     } else {
-      if (lastEventBlockNumber) {
-        fetchEventsAfterDelay(lastEventBlockNumber);
+      if (receivedEventBlockNumber) {
+        fetchEventsAfterDelay(receivedEventBlockNumber);
       }
     }
   } catch (error) {
