@@ -19,6 +19,7 @@ const contractAbi = [
 const contract = new ethers.Contract(contractAddress, contractAbi, provider);
 
 fetchEvents();
+
 // contract.on("*", (params: any) => {
 //   logger.info("NEW EVENT", { data: params });
 //   fetchEventsAfterDelay(params.blockNumber);

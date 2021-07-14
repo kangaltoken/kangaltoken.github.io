@@ -1,6 +1,9 @@
 import fs from "fs";
 import fetch from "node-fetch";
 import simpleGit, { SimpleGit } from "simple-git";
+import { BigNumber } from "ethers";
+
+import logger from "./logger";
 
 const git: SimpleGit = simpleGit();
 
@@ -45,13 +48,12 @@ async function fetchEvents(receivedEventBlockNumber?: number) {
     const events = fs.readFileSync("../apis/staking_events.json").toString();
     eventHistory = JSON.parse(events);
   } catch (error) {
-    console.log(error);
+    logger.error("READ staking_events.json", error);
   }
 
   let query: string;
 
   if (eventHistory) {
-    console.log(eventHistory[eventHistory.length - 1].block.height);
     const lastItemBlock = eventHistory[eventHistory.length - 1].block.height;
     query = makeQuery(lastItemBlock);
   } else {
@@ -86,6 +88,10 @@ async function fetchEvents(receivedEventBlockNumber?: number) {
         const data = JSON.stringify(updatedEventHistory);
         fs.writeFileSync("../apis/staking_events.json", data);
 
+        const accounts = accountBalances(updatedEventHistory);
+        const accountsData = JSON.stringify([...accounts]);
+        fs.writeFileSync("../apis/staking_balances.json", accountsData);
+
         if (receivedEventBlockNumber) {
           let containsLastEventBlockNumber = false;
           updatedEventHistory.forEach((element: any) => {
@@ -98,8 +104,12 @@ async function fetchEvents(receivedEventBlockNumber?: number) {
           }
         }
       } else {
-        const data = JSON.stringify(json.data.ethereum.smartContractEvents);
-        fs.writeFileSync("../apis/staking_events.json", data);
+        const eventsData = JSON.stringify(newEvents);
+        fs.writeFileSync("../apis/staking_events.json", eventsData);
+
+        const accounts = accountBalances(newEvents);
+        const accountsData = JSON.stringify([...accounts]);
+        fs.writeFileSync("../apis/staking_balances.json", accountsData);
       }
 
       git.add("../*").commit("Updated events").push();
@@ -109,7 +119,7 @@ async function fetchEvents(receivedEventBlockNumber?: number) {
       }
     }
   } catch (error) {
-    console.log(error);
+    logger.error("FETCH events", error);
   }
 }
 
@@ -117,6 +127,40 @@ export function fetchEventsAfterDelay(lastEventBlockNumber: number) {
   setTimeout(function () {
     fetchEvents(lastEventBlockNumber);
   }, 60000 * 3);
+}
+
+function accountBalances(events: any): Map<string, BigNumber> {
+  let accounts = new Map<string, BigNumber>();
+
+  events.forEach((event: any) => {
+    const eventType = event.smartContractEvent.name;
+    const address = event.arguments[0].value;
+    const amount = BigNumber.from(event.arguments[1].value);
+
+    if (eventType === "RewardClaim") {
+      return;
+    }
+
+    const currentBalance = accounts.get(address);
+
+    if (currentBalance) {
+      if (eventType === "Deposit") {
+        accounts.set(address, currentBalance.add(amount));
+      } else if (eventType === "Withdrawal") {
+        accounts.set(address, currentBalance.sub(amount));
+      }
+    } else {
+      accounts.set(address, amount);
+    }
+  });
+
+  let sorted = new Map(
+    [...accounts.entries()].sort((a, b) => {
+      return b[1].gt(a[1]) ? 1 : -1;
+    })
+  );
+
+  return sorted;
 }
 
 export default fetchEvents;
