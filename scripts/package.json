@@ -6,24 +6,23 @@
   "scripts": {
     "start": "tsc && node dist/eventParser.js",
     "start-event-listener": "tsc && node dist/eventListener.js",
-    "start-event-parser": "tsc && node dist/eventParser.js",
-    "start-jobs": "tsc && node dist/jobs.js",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "start-event-parser": "tsc && node dist/eventParser.js"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "devDependencies": {
     "@types/node": "^16.3.1",
+    "@types/node-fetch": "^2.5.11",
     "tslint": "^6.1.3",
     "typescript": "^4.3.5"
   },
   "dependencies": {
-    "cron": "^1.8.2",
     "dotenv": "^10.0.0",
     "ethers": "^5.4.1",
     "node-fetch": "^2.6.1",
-    "pino": "^6.12.0",
-    "simple-git": "^2.41.1"
+    "simple-git": "^2.41.1",
+    "winston": "^3.3.3",
+    "winston-daily-rotate-file": "^4.5.5"
   }
 }

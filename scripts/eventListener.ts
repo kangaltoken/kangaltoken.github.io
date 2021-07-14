@@ -1,6 +1,9 @@
-const { ethers, BigNumber, Block, utils } = require("ethers");
+import dotenv from "dotenv";
+dotenv.config();
+import { ethers } from "ethers";
 
-import { fetchEventsAfterDelay } from "./eventParser";
+import logger from "./logger";
+import fetchEvents, { fetchEventsAfterDelay } from "./eventParser";
 
 const provider = new ethers.providers.WebSocketProvider(
   `${process.env.BSC_NODE}`
@@ -15,7 +18,8 @@ const contractAbi = [
 
 const contract = new ethers.Contract(contractAddress, contractAbi, provider);
 
-contract.on("*", (params: any) => {
-  console.log(params);
-  fetchEventsAfterDelay(params.blockNumber);
-});
+fetchEvents();
+// contract.on("*", (params: any) => {
+//   logger.info("NEW EVENT", { data: params });
+//   fetchEventsAfterDelay(params.blockNumber);
+// });

@@ -1,8 +1,7 @@
-require("dotenv").config();
-const fetch = require("node-fetch");
-const util = require("util");
-const fs = require("fs");
+import fs from "fs";
+import fetch from "node-fetch";
 import simpleGit, { SimpleGit } from "simple-git";
+
 const git: SimpleGit = simpleGit();
 
 function makeQuery(fromBlock: number): string {
@@ -43,7 +42,8 @@ async function fetchEvents(receivedEventBlockNumber?: number) {
   let eventHistory: any;
 
   try {
-    eventHistory = JSON.parse(fs.readFileSync("../apis/staking_events.json"));
+    const events = fs.readFileSync("../apis/staking_events.json").toString();
+    eventHistory = JSON.parse(events);
   } catch (error) {
     console.log(error);
   }
@@ -73,14 +73,6 @@ async function fetchEvents(receivedEventBlockNumber?: number) {
   try {
     const json = await fetch(url, opts).then((res: { json: () => any }) =>
       res.json()
-    );
-    console.log(
-      util.inspect(
-        json.data.ethereum.smartContractEvents,
-        false,
-        null,
-        true /* enable colors */
-      )
     );
 
     const newEvents = json.data.ethereum.smartContractEvents;
