@@ -147,7 +147,7 @@ function accountBalances(events: any): Map<string, BigNumber> {
       if (eventType === "Deposit") {
         accounts.set(address, currentBalance.add(amount));
       } else if (eventType === "Withdrawal") {
-        accounts.set(address, currentBalance.sub(amount));
+        accounts.delete(address);
       }
     } else {
       accounts.set(address, amount);
