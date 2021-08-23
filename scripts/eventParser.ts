@@ -7,12 +7,12 @@ import logger from "./logger";
 
 const git: SimpleGit = simpleGit();
 
-function makeQuery(fromBlock: number): string {
+function makeQuery(fromBlock: number, contractAddress: string, network: string): string {
   const query = `
   query KangalStakingEvents {
-    ethereum(network: bsc) {
+    ethereum(network: ${network}) {
       smartContractEvents(
-        smartContractAddress: {is: "0x222Dc5CBc4d5082Ac181532C01A57cC897eA4F15"}
+        smartContractAddress: {is: "${contractAddress}"}
         smartContractEvent: {in: ["Deposit", "Withdrawal", "RewardClaim"]}
         options: {asc: "block.height"}
         height: {gt: ${fromBlock}}
@@ -41,11 +41,16 @@ function makeQuery(fromBlock: number): string {
   return query;
 }
 
-async function fetchEvents(receivedEventBlockNumber?: number) {
+async function fetchEvents(
+  contractAddress: string, 
+  network: string, 
+  eventsFileName: string, 
+  balancesFileName: string, 
+  receivedEventBlockNumber?: number) {
   let eventHistory: any;
 
   try {
-    const events = fs.readFileSync("../apis/staking_events.json").toString();
+    const events = fs.readFileSync(`../apis/${eventsFileName}`).toString();
     eventHistory = JSON.parse(events);
   } catch (error) {
     logger.error("READ staking_events.json", error);
@@ -55,9 +60,9 @@ async function fetchEvents(receivedEventBlockNumber?: number) {
 
   if (eventHistory) {
     const lastItemBlock = eventHistory[eventHistory.length - 1].block.height;
-    query = makeQuery(lastItemBlock);
+    query = makeQuery(lastItemBlock, contractAddress, network);
   } else {
-    query = makeQuery(0);
+    query = makeQuery(0, contractAddress, network);
   }
 
   const url = "https://graphql.bitquery.io/";
@@ -86,11 +91,11 @@ async function fetchEvents(receivedEventBlockNumber?: number) {
           ...json.data.ethereum.smartContractEvents,
         ];
         const data = JSON.stringify(updatedEventHistory);
-        fs.writeFileSync("../apis/staking_events.json", data);
+        fs.writeFileSync(`../apis/${eventsFileName}`, data);
 
         const accounts = accountBalances(updatedEventHistory);
         const accountsData = JSON.stringify([...accounts]);
-        fs.writeFileSync("../apis/staking_balances.json", accountsData);
+        fs.writeFileSync(`../apis/${balancesFileName}`, accountsData);
 
         if (receivedEventBlockNumber) {
           let containsLastEventBlockNumber = false;
@@ -100,22 +105,34 @@ async function fetchEvents(receivedEventBlockNumber?: number) {
             }
           });
           if (containsLastEventBlockNumber === false) {
-            fetchEventsAfterDelay(receivedEventBlockNumber);
+            fetchEventsAfterDelay(
+              contractAddress, 
+              network, 
+              eventsFileName, 
+              balancesFileName, 
+              receivedEventBlockNumber
+            );
           }
         }
       } else {
         const eventsData = JSON.stringify(newEvents);
-        fs.writeFileSync("../apis/staking_events.json", eventsData);
+        fs.writeFileSync(`../apis/${eventsFileName}`, eventsData);
 
         const accounts = accountBalances(newEvents);
         const accountsData = JSON.stringify([...accounts]);
-        fs.writeFileSync("../apis/staking_balances.json", accountsData);
+        fs.writeFileSync(`../apis/${balancesFileName}`, accountsData);
       }
 
-      git.add("../*").commit("Updated events").push();
+      //git.add("../*").commit("Updated events").push();
     } else {
       if (receivedEventBlockNumber) {
-        fetchEventsAfterDelay(receivedEventBlockNumber);
+        fetchEventsAfterDelay(
+          contractAddress, 
+          network, 
+          eventsFileName, 
+          balancesFileName, 
+          receivedEventBlockNumber
+        );
       }
     }
   } catch (error) {
@@ -123,9 +140,14 @@ async function fetchEvents(receivedEventBlockNumber?: number) {
   }
 }
 
-export function fetchEventsAfterDelay(lastEventBlockNumber: number) {
+export function fetchEventsAfterDelay(  
+  contractAddress: string, 
+  network: string, 
+  eventsFileName: string, 
+  balancesFileName: string, 
+  lastEventBlockNumber: number) {
   setTimeout(function () {
-    fetchEvents(lastEventBlockNumber);
+    fetchEvents(contractAddress, network, eventsFileName, balancesFileName, lastEventBlockNumber);
   }, 60000 * 3);
 }
 
