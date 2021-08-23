@@ -123,7 +123,7 @@ async function fetchEvents(
         fs.writeFileSync(`../apis/${balancesFileName}`, accountsData);
       }
 
-      //git.add("../*").commit("Updated events").push();
+      git.add("../*").commit("Updated events").push();
     } else {
       if (receivedEventBlockNumber) {
         fetchEventsAfterDelay(
