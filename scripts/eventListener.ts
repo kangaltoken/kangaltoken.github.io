@@ -29,20 +29,24 @@ const contractPolygon = new ethers.Contract(
   providerPolygon
 );
 
-// contract.on("*", (params: any) => {
-//   logger.info("NEW EVENT", { data: params });
-//   fetchEventsAfterDelay(`${process.env.BSC_CONTRACT}`, "bsc", "staking_events.json", "staking_balances.json", params.blockNumber);
-// });
+contract.on("*", (params: any) => {
+  logger.info("NEW EVENT", { data: params });
+  fetchEventsAfterDelay(
+    `${process.env.BSC_CONTRACT}`,
+    "bsc",
+    "staking_events.json",
+    "staking_balances.json",
+    params.blockNumber
+  );
+});
 
-// contractPolygon.on("*", (params: any) => {
-//   logger.info("NEW EVENT", { data: params });
-//   fetchEventsAfterDelay(`${process.env.POLYGON_CONTRACT}`, "matic", "staking_events_polygon.json", "staking_balances_polygon.json", params.blockNumber);
-// });
-
-fetchEvents(
-  `${process.env.POLYGON_CONTRACT}`,
-  "matic",
-  "staking_events_polygon.json",
-  "staking_balances_polygon.json",
-  18121769
-);
+contractPolygon.on("*", (params: any) => {
+  logger.info("NEW EVENT", { data: params });
+  fetchEventsAfterDelay(
+    `${process.env.POLYGON_CONTRACT}`,
+    "matic",
+    "staking_events_polygon.json",
+    "staking_balances_polygon.json",
+    params.blockNumber
+  );
+});
