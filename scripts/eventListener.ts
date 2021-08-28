@@ -3,7 +3,7 @@ dotenv.config();
 import { ethers } from "ethers";
 
 import logger from "./logger";
-import { fetchEventsAfterDelay } from "./eventParser";
+import fetchEvents, { fetchEventsAfterDelay } from "./eventParser";
 
 const provider = new ethers.providers.WebSocketProvider(
   `${process.env.BSC_NODE}`
@@ -18,15 +18,31 @@ const contractAbi = [
   "event RewardClaim(address indexed account, uint256 indexed amount)",
 ];
 
-const contract = new ethers.Contract(`${process.env.BSC_CONTRACT}`, contractAbi, provider);
-const contractPolygon = new ethers.Contract(`${process.env.POLYGON_CONTRACT}`, contractAbi, providerPolygon);
+const contract = new ethers.Contract(
+  `${process.env.BSC_CONTRACT}`,
+  contractAbi,
+  provider
+);
+const contractPolygon = new ethers.Contract(
+  `${process.env.POLYGON_CONTRACT}`,
+  contractAbi,
+  providerPolygon
+);
 
-contract.on("*", (params: any) => {
-  logger.info("NEW EVENT", { data: params });
-  fetchEventsAfterDelay(`${process.env.BSC_CONTRACT}`, "bsc", "staking_events.json", "staking_balances.json", params.blockNumber);
-});
+// contract.on("*", (params: any) => {
+//   logger.info("NEW EVENT", { data: params });
+//   fetchEventsAfterDelay(`${process.env.BSC_CONTRACT}`, "bsc", "staking_events.json", "staking_balances.json", params.blockNumber);
+// });
 
-contractPolygon.on("*", (params: any) => {
-  logger.info("NEW EVENT", { data: params });
-  fetchEventsAfterDelay(`${process.env.POLYGON_CONTRACT}`, "matic", "staking_events_polygon.json", "staking_balances_polygon.json", params.blockNumber);
-});
+// contractPolygon.on("*", (params: any) => {
+//   logger.info("NEW EVENT", { data: params });
+//   fetchEventsAfterDelay(`${process.env.POLYGON_CONTRACT}`, "matic", "staking_events_polygon.json", "staking_balances_polygon.json", params.blockNumber);
+// });
+
+fetchEvents(
+  `${process.env.POLYGON_CONTRACT}`,
+  "matic",
+  "staking_events_polygon.json",
+  "staking_balances_polygon.json",
+  18121769
+);
