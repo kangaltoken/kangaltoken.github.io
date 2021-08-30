@@ -1,119 +1,53 @@
 import fs from "fs";
-import fetch from "node-fetch";
 import simpleGit, { SimpleGit } from "simple-git";
 import { BigNumber } from "ethers";
 
 import logger from "./logger";
+import getStakingContractEvents, {
+  NetworkType,
+  StakingContractEvent,
+} from "./getStakingContractEvents";
 
 const git: SimpleGit = simpleGit();
 
-function makeQuery(fromBlock: number, contractAddress: string, network: string): string {
-  const query = `
-  query KangalStakingEvents {
-    ethereum(network: ${network}) {
-      smartContractEvents(
-        smartContractAddress: {is: "${contractAddress}"}
-        smartContractEvent: {in: ["Deposit", "Withdrawal", "RewardClaim"]}
-        options: {asc: "block.height"}
-        height: {gt: ${fromBlock}}
-      ) {
-        smartContractEvent {
-          name
-        }
-        transaction {
-          hash
-        }
-        arguments {
-          value
-          argumentType
-        }
-        block {
-          timestamp {
-            unixtime
-          }
-          height
-        }
-      }
-    }
-  }
-  `;
-
-  return query;
-}
-
 async function fetchEvents(
-  contractAddress: string, 
-  network: string, 
-  eventsFileName: string, 
-  balancesFileName: string, 
-  receivedEventBlockNumber?: number) {
-  let eventHistory: any;
+  network: NetworkType,
+  eventsFileName: string,
+  balancesFileName: string
+) {
+  let eventHistory: StakingContractEvent[] = [];
+  let newEvents: StakingContractEvent[] = [];
 
   try {
     const events = fs.readFileSync(`../apis/${eventsFileName}`).toString();
     eventHistory = JSON.parse(events);
   } catch (error) {
-    logger.error("READ staking_events.json", error);
+    logger.error("READ eventsFileName", eventsFileName, error);
   }
-
-  let query: string;
-
-  if (eventHistory) {
-    const lastItemBlock = eventHistory[eventHistory.length - 1].block.height;
-    query = makeQuery(lastItemBlock, contractAddress, network);
-  } else {
-    query = makeQuery(0, contractAddress, network);
-  }
-
-  const url = "https://graphql.bitquery.io/";
-  const opts = {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "X-API-KEY": `${process.env.BITQUERY_API_KEY}`,
-    },
-    body: JSON.stringify({
-      query,
-    }),
-  };
 
   try {
-    const json = await fetch(url, opts).then((res: { json: () => any }) =>
-      res.json()
-    );
-
-    const newEvents = json.data.ethereum.smartContractEvents;
+    if (eventHistory.length > 0) {
+      const lastItemBlock = eventHistory[eventHistory.length - 1].block;
+      newEvents = await getStakingContractEvents(network, lastItemBlock);
+    } else {
+      let fromBlock = 0;
+      if (network == NetworkType.bsc) {
+        fromBlock = 8608240;
+      } else {
+        fromBlock = 18170790;
+      }
+      newEvents = await getStakingContractEvents(network, fromBlock);
+    }
 
     if (newEvents.length > 0) {
-      if (eventHistory) {
-        const updatedEventHistory = [
-          ...eventHistory,
-          ...json.data.ethereum.smartContractEvents,
-        ];
+      if (eventHistory.length > 0) {
+        const updatedEventHistory = [...eventHistory, ...newEvents];
         const data = JSON.stringify(updatedEventHistory);
         fs.writeFileSync(`../apis/${eventsFileName}`, data);
 
         const accounts = accountBalances(updatedEventHistory);
         const accountsData = JSON.stringify([...accounts]);
         fs.writeFileSync(`../apis/${balancesFileName}`, accountsData);
-
-        if (receivedEventBlockNumber) {
-          let containsLastEventBlockNumber = false;
-          updatedEventHistory.forEach((element: any) => {
-            if (element.block.height === receivedEventBlockNumber) {
-              containsLastEventBlockNumber = true;
-            }
-          });
-          if (containsLastEventBlockNumber === false) {
-            fetchEventsAfterDelay(
-              contractAddress, 
-              network, 
-              eventsFileName, 
-              balancesFileName, 
-              receivedEventBlockNumber
-            );
-          }
-        }
       } else {
         const eventsData = JSON.stringify(newEvents);
         fs.writeFileSync(`../apis/${eventsFileName}`, eventsData);
@@ -124,55 +58,32 @@ async function fetchEvents(
       }
 
       git.add("../*").commit("Updated events").push();
-    } else {
-      if (receivedEventBlockNumber) {
-        fetchEventsAfterDelay(
-          contractAddress, 
-          network, 
-          eventsFileName, 
-          balancesFileName, 
-          receivedEventBlockNumber
-        );
-      }
     }
   } catch (error) {
     logger.error("FETCH events", error);
   }
 }
 
-export function fetchEventsAfterDelay(  
-  contractAddress: string, 
-  network: string, 
-  eventsFileName: string, 
-  balancesFileName: string, 
-  lastEventBlockNumber: number) {
-  setTimeout(function () {
-    fetchEvents(contractAddress, network, eventsFileName, balancesFileName, lastEventBlockNumber);
-  }, 60000 * 3);
-}
-
-function accountBalances(events: any): Map<string, BigNumber> {
+function accountBalances(
+  events: StakingContractEvent[]
+): Map<string, BigNumber> {
   let accounts = new Map<string, BigNumber>();
 
-  events.forEach((event: any) => {
-    const eventType = event.smartContractEvent.name;
-    const address = event.arguments[0].value;
-    const amount = BigNumber.from(event.arguments[1].value);
-
-    if (eventType === "RewardClaim") {
+  events.forEach((event: StakingContractEvent) => {
+    if (event.name === "RewardClaim") {
       return;
     }
 
-    const currentBalance = accounts.get(address);
+    const currentBalance = accounts.get(event.address) ?? BigNumber.from(0);
 
     if (currentBalance) {
-      if (eventType === "Deposit") {
-        accounts.set(address, currentBalance.add(amount));
-      } else if (eventType === "Withdrawal") {
-        accounts.delete(address);
+      if (event.name === "Deposit") {
+        accounts.set(event.address, currentBalance.add(event.amount));
+      } else if (event.name === "Withdrawal") {
+        accounts.delete(event.address);
       }
     } else {
-      accounts.set(address, amount);
+      accounts.set(event.address, event.amount);
     }
   });
 

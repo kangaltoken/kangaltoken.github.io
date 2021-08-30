@@ -3,7 +3,8 @@ dotenv.config();
 import { ethers } from "ethers";
 
 import logger from "./logger";
-import fetchEvents, { fetchEventsAfterDelay } from "./eventParser";
+import fetchEvents from "./eventParser";
+import { NetworkType } from "./getStakingContractEvents";
 
 const provider = new ethers.providers.WebSocketProvider(
   `${process.env.BSC_NODE}`
@@ -31,38 +32,14 @@ const contractPolygon = new ethers.Contract(
 
 contract.on("*", (params: any) => {
   logger.info("NEW EVENT", { data: params });
-  fetchEventsAfterDelay(
-    `${process.env.BSC_CONTRACT}`,
-    "bsc",
-    "staking_events.json",
-    "staking_balances.json",
-    params.blockNumber
-  );
+  fetchEvents(NetworkType.bsc, "staking_events.json", "staking_balances.json");
 });
 
 contractPolygon.on("*", (params: any) => {
   logger.info("NEW EVENT", { data: params });
-  fetchEventsAfterDelay(
-    `${process.env.POLYGON_CONTRACT}`,
-    "matic",
+  fetchEvents(
+    NetworkType.polygon,
     "staking_events_polygon.json",
-    "staking_balances_polygon.json",
-    params.blockNumber
+    "staking_balances_polygon.json"
   );
 });
-
-
-// Fetch latest on restart
-fetchEvents(
-  `${process.env.BSC_CONTRACT}`,
-  "bsc",
-  "staking_events.json",
-  "staking_balances.json"
-)
-
-fetchEvents(
-  `${process.env.POLYGON_CONTRACT}`,
-  "matic",
-  "staking_events_polygon.json",
-  "staking_balances_polygon.json"
-)
