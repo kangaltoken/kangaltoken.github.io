@@ -50,3 +50,19 @@ contractPolygon.on("*", (params: any) => {
     params.blockNumber
   );
 });
+
+
+// Fetch latest on restart
+fetchEvents(
+  `${process.env.BSC_CONTRACT}`,
+  "bsc",
+  "staking_events.json",
+  "staking_balances.json"
+)
+
+fetchEvents(
+  `${process.env.POLYGON_CONTRACT}`,
+  "matic",
+  "staking_events_polygon.json",
+  "staking_balances_polygon.json"
+)
