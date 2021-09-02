@@ -3,7 +3,7 @@ dotenv.config();
 import { ethers } from "ethers";
 
 import logger from "./logger";
-import fetchEvents from "./eventParser";
+import processEvents from "./eventProcessing";
 import { NetworkType } from "./getStakingContractEvents";
 
 const provider = new ethers.providers.WebSocketProvider(
@@ -32,12 +32,16 @@ const contractPolygon = new ethers.Contract(
 
 contract.on("*", (params: any) => {
   logger.info("NEW EVENT", { data: params });
-  fetchEvents(NetworkType.bsc, "staking_events.json", "staking_balances.json");
+  processEvents(
+    NetworkType.bsc,
+    "staking_events.json",
+    "staking_balances.json"
+  );
 });
 
 contractPolygon.on("*", (params: any) => {
   logger.info("NEW EVENT", { data: params });
-  fetchEvents(
+  processEvents(
     NetworkType.polygon,
     "staking_events_polygon.json",
     "staking_balances_polygon.json"

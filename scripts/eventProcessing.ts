@@ -10,7 +10,7 @@ import getStakingContractEvents, {
 
 const git: SimpleGit = simpleGit();
 
-async function fetchEvents(
+async function processEvents(
   network: NetworkType,
   eventsFileName: string,
   balancesFileName: string
@@ -96,4 +96,4 @@ function accountBalances(
   return sorted;
 }
 
-export default fetchEvents;
+export default processEvents;
