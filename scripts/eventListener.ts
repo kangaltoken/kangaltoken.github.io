@@ -30,20 +30,28 @@ const contractPolygon = new ethers.Contract(
   providerPolygon
 );
 
-contract.on("*", (params: any) => {
-  logger.info("NEW EVENT", { data: params });
-  processEvents(
-    NetworkType.bsc,
-    "staking_events.json",
-    "staking_balances.json"
-  );
-});
+// contract.on("*", (params: any) => {
+//   logger.info("NEW EVENT", { data: params });
+//   processEvents(
+//     NetworkType.bsc,
+//     "staking_events.json",
+//     "staking_balances.json"
+//   );
+// });
 
-contractPolygon.on("*", (params: any) => {
-  logger.info("NEW EVENT", { data: params });
-  processEvents(
-    NetworkType.polygon,
-    "staking_events_polygon.json",
-    "staking_balances_polygon.json"
-  );
-});
+// contractPolygon.on("*", (params: any) => {
+//   logger.info("NEW EVENT", { data: params });
+//   processEvents(
+//     NetworkType.polygon,
+//     "staking_events_polygon.json",
+//     "staking_balances_polygon.json"
+//   );
+// });
+
+processEvents(NetworkType.bsc, "staking_events.json", "staking_balances.json");
+
+// processEvents(
+//   NetworkType.polygon,
+//   "staking_events_polygon.json",
+//   "staking_balances_polygon.json"
+// );
