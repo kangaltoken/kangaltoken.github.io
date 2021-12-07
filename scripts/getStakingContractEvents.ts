@@ -51,7 +51,9 @@ async function getStakingContractEvents(
 
   while (lastProcessedBlock < latestBlock) {
     console.log(
-      "Processing blocks:",
+      `Processing blocks (${
+        network === NetworkType.polygon ? "Polygon" : "BSC"
+      }):`,
       lastProcessedBlock,
       lastProcessedBlock + blockRange
     );
