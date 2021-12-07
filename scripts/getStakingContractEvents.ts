@@ -26,7 +26,7 @@ async function getStakingContractEvents(
   fromBlock: number,
   toBlock?: number
 ) {
-  const blockRange = 10000;
+  const blockRange = network === NetworkType.polygon ? 10000 : 5000;
   let provider: ethers.providers.JsonRpcProvider;
   let contractAddress: string;
 
