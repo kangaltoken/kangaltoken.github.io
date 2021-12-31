@@ -28,7 +28,7 @@ async function processEvents(
   try {
     if (eventHistory.length > 0) {
       const lastItemBlock = eventHistory[eventHistory.length - 1].block;
-      newEvents = await getStakingContractEvents(network, lastItemBlock);
+      newEvents = await getStakingContractEvents(network, lastItemBlock + 1);
     } else {
       let fromBlock = 0;
       if (network == NetworkType.bsc) {
